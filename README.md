@@ -76,7 +76,7 @@ we need to get three docker images
 
 ```bash
 # clone the project
-git clone https://github.com/houshmand-2005/chat_app
+git clone https://github.com/AshmitRajput/PulseChat.git
 # go to the folder
 cd chat_app
 # run project with docker
