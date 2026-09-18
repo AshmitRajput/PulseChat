@@ -81,7 +81,7 @@
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
 
-      fetch("http://127.0.0.1:8000/token", {
+      fetch("http://127.0.0.1/token", {
         method: "POST",
         body: new URLSearchParams({
           username: username,

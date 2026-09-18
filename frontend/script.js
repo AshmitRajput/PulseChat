@@ -2,9 +2,9 @@ const msgerForm = get(".msger-inputarea");
 const msgerInput = get(".msger-input");
 const msgerChat = get(".msger-chat");
 
-const BaseUrl = "http://127.0.0.1:8000";
+const BaseUrl = "http://127.0.0.1";
 const FrontBaseUrl = "http://127.0.0.1";
-const WebSocketBaseUrl = "ws://127.0.0.1:8000";
+const WebSocketBaseUrl = "ws://127.0.0.1";
 
 const BOT_IMG = "images/icons8-male-user-96.png";
 const PERSON_IMG = "images/icons8-male-user-94.png";
@@ -12,7 +12,6 @@ let last_message_id = 0;
 token = getCookie("token");
 group_id = getCookie("group");
 let socketSendMessage;
-let socketGetUnreadMessages;
 const headers = new Headers({
   Authorization: `Bearer ${token}`,
 });
@@ -24,48 +23,34 @@ function checkToken() {
   });
 }
 checkToken();
+
 async function connectWebSocket() {
   token = getCookie("token");
   group_id = getCookie("group");
 
+  // Single socket now handles BOTH sending and receiving (catch-up + live),
+  // since Phase 1 removed /get-unread-messages. All incoming events —
+  // new messages, edits, deletes — arrive on this one connection.
   socketSendMessage = new WebSocket(
     WebSocketBaseUrl + `/send-message?token=${token}&group_id=${group_id}`
   );
-  socketSendMessage.onclose = function (event) {
-    console.log(`WebSocket Closed with Code ${event.code}`);
-    checkToken();
-    alert("Your Connection Was Cropped Try To Connect Again");
-    setTimeout(connectWebSocket, 6000);
+
+  socketSendMessage.onopen = function (event) {
+    console.log("WebSocket connection established");
   };
 
-  socketGetUnreadMessages = new WebSocket(
-    WebSocketBaseUrl +
-      `/get-unread-messages?token=${token}&group_id=${group_id}`
-  );
-  console.log(socketGetUnreadMessages);
-  socketGetUnreadMessages.onopen = function (event) {
-    console.log(
-      "WebSocket Connection for Receiving Unread Messages Established"
-    );
-  };
-
-  socketGetUnreadMessages.onmessage = function (event) {
+  socketSendMessage.onmessage = function (event) {
     const messageData = JSON.parse(event.data);
-    // console.log(messageData);
     const type = messageData.type;
-    // console.log(type);
+
     if (type == "Edit" || type == "Delete") {
       const messageText = messageData.new_text;
       const id = messageData.id;
-      console.log(id);
-      // console.log(messageText);
       const element = document.getElementById(id);
       if (type == "Edit") {
         if (element) {
-          // Change the text content
           element.textContent = messageText;
-          if (document.getElementById("edited-indication")) {
-          } else {
+          if (!document.getElementById("edited-indication")) {
             const editIndication = document.createElement("span");
             editIndication.textContent = " (Edited)";
             editIndication.className = "edited-indication";
@@ -74,41 +59,36 @@ async function connectWebSocket() {
           }
         }
       } else {
-        element.textContent = "";
-        const editIndication = document.createElement("span");
-        editIndication.textContent = "This message has been deleted";
-        editIndication.className = "deleted-indication";
-        element.parentNode.appendChild(editIndication);
+        if (element) {
+          element.textContent = "";
+          const editIndication = document.createElement("span");
+          editIndication.textContent = "This message has been deleted";
+          editIndication.className = "deleted-indication";
+          element.parentNode.appendChild(editIndication);
+        }
       }
     } else {
       const messageText = messageData.text;
       const senderName = messageData.sender_name;
       const id = messageData.id;
       const datetime = messageData.datetime;
-      console.log(id);
-      // console.log(messageText);
 
       if (senderName == getCookie("username")) {
-        appendMessage(
-          senderName,
-          PERSON_IMG,
-          "right",
-          messageText,
-          id,
-          datetime
-        );
+        appendMessage(senderName, PERSON_IMG, "right", messageText, id, datetime);
       } else {
         appendMessage(senderName, BOT_IMG, "left", messageText, id, datetime);
       }
     }
   };
 
-  socketGetUnreadMessages.onclose = function (event) {
+  socketSendMessage.onclose = function (event) {
     console.log(`WebSocket Closed with Code ${event.code}`);
+    checkToken();
     alert("Your Connection Was Cropped Try To Connect Again");
     setTimeout(connectWebSocket, 6000);
   };
 }
+
 msgerForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
@@ -138,8 +118,6 @@ function draw_line(callback) {
   }
 }
 function appendMessage(name, img, side, text, id, datetime = null) {
-  //   Simple solution for small apps
-  // console.log(datetime);
   if (datetime == null) {
     datetime = formatDate(new Date());
   } else {
@@ -155,7 +133,6 @@ function appendMessage(name, img, side, text, id, datetime = null) {
     var formattedDatetime = datetimeObject.toLocaleDateString("en-US", options);
     datetime = formattedDatetime;
   }
-  // console.log(datetime);
   if (side == "right") {
     edit_delete = `
   <div class="msg-info-time"><img src="images/bin.png" width="14" height="14" border="0" onclick="deleteMessage(${id})"/></div>
@@ -185,7 +162,6 @@ function appendMessage(name, img, side, text, id, datetime = null) {
   msgerChat.scrollTop += 500;
 }
 
-// Utils
 function get(selector, root = document) {
   return root.querySelector(selector);
 }
@@ -238,29 +214,14 @@ async function write_old_messages() {
         } else {
           const messages = messageData;
           messages.forEach((message) => {
-            // console.log(message);
             let username = message.username;
             let messageText = message.message_text;
             const datetime = message.datetime;
             let id = message.message_id;
             if (username == getCookie("username")) {
-              appendMessage(
-                username,
-                PERSON_IMG,
-                "right",
-                messageText,
-                id,
-                datetime
-              );
+              appendMessage(username, PERSON_IMG, "right", messageText, id, datetime);
             } else
-              appendMessage(
-                username,
-                BOT_IMG,
-                "left",
-                messageText,
-                id,
-                datetime
-              );
+              appendMessage(username, BOT_IMG, "left", messageText, id, datetime);
           });
         }
       })

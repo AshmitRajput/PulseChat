@@ -23,7 +23,7 @@ services:
       timeout: 3s
       retries: 5
 
-  # FrontEnd
+  # FrontEnd + reverse proxy to app
   nginx:
     restart: unless-stopped
     image: nginx:1.25.4-alpine
@@ -31,6 +31,7 @@ services:
       - "80:80"
     volumes:
       - ./frontend:/usr/share/nginx/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app
 
@@ -45,13 +46,16 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    ports:
-      - "8000:8000"
-    # no more "sleep 3s" hack - depends_on now actually waits for db+redis
-    # to report healthy before this container starts.
+    # No fixed host port anymore - two scaled containers can't both bind
+    # 8000:8000. "expose" makes 8000 reachable to other containers on the
+    # same Docker network (i.e. nginx) without publishing it to the host.
+    # All access now goes through nginx on port 80.
+    expose:
+      - "8000"
     command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 5
+      
