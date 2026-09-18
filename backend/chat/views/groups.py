@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chat import app, models, schema
 from chat.crud import (
@@ -28,7 +28,7 @@ async def create_group(
     address: str,
     name: str,
     current_user: schema.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Create Group
@@ -66,7 +66,7 @@ async def create_group(
 )
 async def get_group_members(
     group_id: int,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: schema.User = Depends(get_current_active_user),
 ):
     """
@@ -100,7 +100,7 @@ async def get_group_members(
 @app.post("/group/join", response_model=bool, tags=["Groups"])
 async def join_group(
     address: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: schema.User = Depends(get_current_active_user),
 ):
     """
@@ -131,7 +131,7 @@ async def join_group(
 async def get_group_messages(
     group_id: int,
     current_user: Annotated[schema.User, Depends(get_current_active_user)],
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Get Group reads messages

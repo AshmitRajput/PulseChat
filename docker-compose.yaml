@@ -1,4 +1,3 @@
-version: '3'
 services:
   # PostgreSQL database
   db:
@@ -13,6 +12,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Redis - Pub/Sub + presence (Phase 1)
+  redis:
+    restart: unless-stopped
+    image: redis:7-alpine
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   # FrontEnd
   nginx:
     restart: unless-stopped
@@ -23,19 +33,25 @@ services:
       - ./frontend:/usr/share/nginx/html
     depends_on:
       - app
+
   # FastApi
   app:
     restart: unless-stopped
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     build:
       context: .
       dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
-    command: sh -c "sleep 3s && uvicorn main:app --host 0.0.0.0 --port 8000"
+    # no more "sleep 3s" hack - depends_on now actually waits for db+redis
+    # to report healthy before this container starts.
+    command: sh -c "uvicorn main:app --host 0.0.0.0 --port 8000"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/health/" ]
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8000/health" ]
       interval: 10s
       timeout: 5s
       retries: 5

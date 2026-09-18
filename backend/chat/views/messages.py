@@ -1,5 +1,5 @@
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chat import app, models
 from chat.crud import (
@@ -25,7 +25,7 @@ from chat.views.websocket import broadcast_changes
 async def get_first_unread_message(
     group_id: int,
     current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> int | None:
     """
     Send first unread message id
@@ -52,7 +52,7 @@ async def edit_message_by_id(
     message_id: int,
     changed_message: str,
     current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> str | None:
     """
     Edit text of the message by message id
@@ -96,7 +96,7 @@ async def edit_message_by_id(
 async def delete_message_by_id(
     message_id: int,
     current_user: models.User = Depends(get_current_active_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> str | None:
     """
     Delete text of the message by message id

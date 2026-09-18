@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chat import app
 from chat.crud import (
@@ -57,7 +57,7 @@ async def unread_messages(
 
 
 @app.post("/user/create", response_model=User, tags=["User"])
-async def create_user(user: CreateUser, db: Session = Depends(get_db)):
+async def create_user(user: CreateUser, db: AsyncSession = Depends(get_db)):
     """
     Create User
     - username [str]
@@ -84,7 +84,7 @@ async def create_user(user: CreateUser, db: Session = Depends(get_db)):
 
 @app.get("/user/groups", tags=["User"])
 async def get_user_groups(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """

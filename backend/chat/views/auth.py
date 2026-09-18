@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from chat import app
 from chat.database import get_db
@@ -27,7 +27,7 @@ async def health_check():
 @app.post("/token", response_model=Token)
 async def create_jwt_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    user_db: Session = Depends(get_db),
+    user_db: AsyncSession = Depends(get_db),
 ):
     """
     Create token for user
@@ -38,7 +38,7 @@ async def create_jwt_token(
     - access_token
     - token_type
     """
-    user = authenticate_user(
+    user = await authenticate_user(
         user_db,
         form_data.username,
         form_data.password,
